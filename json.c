@@ -67,10 +67,17 @@ char* escape_json_string(const char *input, char *output, size_t output_size) {
 }
 
 bool construct_gemini_request(const MathRequest *request, char *json_buffer, size_t buffer_size) {
-    // Escape the problem text
-    char escaped_problem[4096 * 2]; // Double size for worst case escaping
+    // Escape the problem text - allocate enough for worst-case 6x expansion
+    char escaped_problem[4096 * 6 + 1];
     if (!escape_json_string(request->problem_text, escaped_problem, sizeof(escaped_problem))) {
         fprintf(stderr, "Error: Failed to escape problem text\n");
+        return false;
+    }
+
+    // Escape the language string
+    char escaped_language[16 * 6 + 1];
+    if (!escape_json_string(request->language, escaped_language, sizeof(escaped_language))) {
+        fprintf(stderr, "Error: Failed to escape language\n");
         return false;
     }
 
@@ -94,7 +101,7 @@ bool construct_gemini_request(const MathRequest *request, char *json_buffer, siz
         "}"
         "]"
         "}",
-        request->language,
+        escaped_language,
         escaped_problem
     );
 

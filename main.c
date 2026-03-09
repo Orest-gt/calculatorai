@@ -47,7 +47,9 @@ int main(void) {
     }
 
     // Remove trailing newline
-    request.problem_text[strcspn(request.problem_text, "\n")] = '\0';
+    size_t input_len = strcspn(request.problem_text, "\n");
+    bool was_truncated = (input_len == sizeof(request.problem_text) - 1 && request.problem_text[input_len] != '\n');
+    request.problem_text[input_len] = '\0';
 
     // Validate input
     if (strlen(request.problem_text) == 0) {
@@ -56,7 +58,7 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    if (strlen(request.problem_text) >= sizeof(request.problem_text) - 1) {
+    if (was_truncated) {
         fprintf(stderr, "Error: Input too long\n");
         cleanup_curl(&http_ctx);
         return EXIT_FAILURE;
