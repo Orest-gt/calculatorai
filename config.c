@@ -1,0 +1,127 @@
+#include "config.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+// Simple INI parser helper functions
+static char* trim_whitespace(char* str) {
+    char* end;
+
+    // Trim leading space
+    while(isspace((unsigned char)*str)) str++;
+
+    if(*str == 0) return str;
+
+    // Trim trailing space
+    end = str + strlen(str) - 1;
+    while(end > str && isspace((unsigned char)*end)) end--;
+
+    // Write new null terminator character
+    end[1] = '\0';
+
+    return str;
+}
+
+static bool parse_ini_line(const char* line, char* key, char* value) {
+    const char* equals = strchr(line, '=');
+    if (!equals) return false;
+
+    size_t key_len = equals - line;
+    if (key_len >= 256) return false;
+
+    strncpy(key, line, key_len);
+    key[key_len] = '\0';
+    trim_whitespace(key);
+
+    strcpy(value, equals + 1);
+    trim_whitespace(value);
+
+    return true;
+}
+
+bool load_config(const char *config_path, Config *config) {
+    FILE *file = fopen(config_path, "r");
+    if (!file) {
+        fprintf(stderr, "Error: Cannot open config file '%s'\n", config_path);
+        return false;
+    }
+
+    // Set defaults
+    strcpy(config->language, "en");
+    config->timeout_seconds = 30;
+    strcpy(config->endpoint, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent");
+
+    char line[512];
+    char section[64] = "";
+    bool in_gemini_section = false;
+
+    while (fgets(line, sizeof(line), file)) {
+        // Remove newline
+        line[strcspn(line, "\n")] = 0;
+
+        // Skip empty lines and comments
+        if (strlen(trim_whitespace(line)) == 0 || line[0] == ';' || line[0] == '#') {
+            continue;
+        }
+
+        // Section header
+        if (line[0] == '[') {
+            char* end = strchr(line, ']');
+            if (end) {
+                *end = '\0';
+                strcpy(section, line + 1);
+                in_gemini_section = (strcmp(section, "gemini") == 0);
+            }
+            continue;
+        }
+
+        // Parse key-value pairs only in [gemini] section
+        if (in_gemini_section) {
+            char key[256];
+            char value[256];
+
+            if (parse_ini_line(line, key, value)) {
+                if (strcmp(key, "api_key") == 0) {
+                    strncpy(config->api_key, value, sizeof(config->api_key) - 1);
+                    config->api_key[sizeof(config->api_key) - 1] = '\0';
+                } else if (strcmp(key, "language") == 0) {
+                    strncpy(config->language, value, sizeof(config->language) - 1);
+                    config->language[sizeof(config->language) - 1] = '\0';
+                } else if (strcmp(key, "timeout") == 0) {
+                    config->timeout_seconds = atoi(value);
+                } else if (strcmp(key, "endpoint") == 0) {
+                    strncpy(config->endpoint, value, sizeof(config->endpoint) - 1);
+                    config->endpoint[sizeof(config->endpoint) - 1] = '\0';
+                }
+            }
+        }
+    }
+
+    fclose(file);
+    return true;
+}
+
+bool validate_config(const Config *config) {
+    if (strlen(config->api_key) == 0) {
+        fprintf(stderr, "Error: API key is required\n");
+        return false;
+    }
+
+    if (strlen(config->language) == 0) {
+        fprintf(stderr, "Error: Language is required\n");
+        return false;
+    }
+
+    if (config->timeout_seconds <= 0 || config->timeout_seconds > 300) {
+        fprintf(stderr, "Error: Timeout must be between 1 and 300 seconds\n");
+        return false;
+    }
+
+    if (strlen(config->endpoint) == 0) {
+        fprintf(stderr, "Error: Endpoint URL is required\n");
+        return false;
+    }
+
+    return true;
+}
