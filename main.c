@@ -78,7 +78,7 @@ int main(void) {
     }
 
     // Send request
-    if (!send_request(&http_ctx, config.endpoint, config.api_key, json_payload)) {
+    if (!send_request(&http_ctx, config.endpoint, json_payload)) {
         fprintf(stderr, "Failed to send request\n");
         cleanup_curl(&http_ctx);
         return EXIT_FAILURE;
