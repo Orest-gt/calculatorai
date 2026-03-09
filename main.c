@@ -32,7 +32,7 @@ int main(void) {
     }
 
     // Initialize curl
-    if (!init_curl(&http_ctx, config.api_key, config.timeout_seconds)) {
+    if (!init_curl(&http_ctx)) {
         fprintf(stderr, "Failed to initialize HTTP client\n");
         return EXIT_FAILURE;
     }
@@ -76,7 +76,7 @@ int main(void) {
     }
 
     // Send request
-    if (!send_request(&http_ctx, config.endpoint, json_payload)) {
+    if (!send_request(&http_ctx, config.endpoint, config.api_key, json_payload)) {
         fprintf(stderr, "Failed to send request\n");
         cleanup_curl(&http_ctx);
         return EXIT_FAILURE;

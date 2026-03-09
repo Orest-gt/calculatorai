@@ -20,7 +20,7 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total_size;
 }
 
-bool init_curl(HttpContext *ctx, const char *api_key, int timeout_seconds) {
+bool init_curl(HttpContext *ctx) {
     // Initialize curl
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "Error: Failed to initialize libcurl\n");
@@ -38,18 +38,12 @@ bool init_curl(HttpContext *ctx, const char *api_key, int timeout_seconds) {
         return false;
     }
 
-    // Set timeout
-    curl_easy_setopt(ctx->curl_handle, CURLOPT_TIMEOUT, timeout_seconds);
+    // Set timeout (30 seconds default)
+    curl_easy_setopt(ctx->curl_handle, CURLOPT_TIMEOUT, 30);
 
-    // Set up headers
+    // Set up headers (only Content-Type for JSON)
     ctx->headers = NULL;
     ctx->headers = curl_slist_append(ctx->headers, "Content-Type: application/json");
-
-    // Create authorization header
-    char auth_header[512];
-    snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", api_key);
-    ctx->headers = curl_slist_append(ctx->headers, auth_header);
-
     curl_easy_setopt(ctx->curl_handle, CURLOPT_HTTPHEADER, ctx->headers);
 
     // Set up response handling
@@ -66,13 +60,20 @@ bool init_curl(HttpContext *ctx, const char *api_key, int timeout_seconds) {
     return true;
 }
 
-bool send_request(HttpContext *ctx, const char *url, const char *json_payload) {
+bool send_request(HttpContext *ctx, const char *base_url, const char *api_key, const char *json_payload) {
     // Reset response buffer
     ctx->response_size = 0;
     ctx->response_buffer[0] = '\0';
 
+    // Construct full URL with API key as query parameter
+    char full_url[1024];
+    if (snprintf(full_url, sizeof(full_url), "%s?key=%s", base_url, api_key) >= (int)sizeof(full_url)) {
+        fprintf(stderr, "Error: URL too long\n");
+        return false;
+    }
+
     // Set URL
-    curl_easy_setopt(ctx->curl_handle, CURLOPT_URL, url);
+    curl_easy_setopt(ctx->curl_handle, CURLOPT_URL, full_url);
 
     // Set POST data
     curl_easy_setopt(ctx->curl_handle, CURLOPT_POSTFIELDS, json_payload);
