@@ -6,7 +6,7 @@
 
 // Simple JSON parser for Gemini response
 // Expected structure: {"candidates":[{"content":{"parts":[{"text":"solution"}]}}]}
-static char* extract_text_value(const char *json, const char *key_path) {
+static char* extract_text_value(const char *json, const char *key_path __attribute__((unused))) {
     // This is a very basic JSON parser - in production you'd want a proper JSON library
     // But for this simple use case, we'll extract the text field manually
 
