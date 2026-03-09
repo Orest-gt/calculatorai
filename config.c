@@ -57,7 +57,7 @@ static bool parse_ini_line(const char* line, char* key, char* value) {
     size_t value_len = strlen(value_start);
     if (value_len >= 256) return false; // Value too long
 
-    strncpy(value, value_start, value_len);
+    memcpy(value, value_start, value_len);
     value[value_len] = '\0';
     trim_whitespace(value);
 
