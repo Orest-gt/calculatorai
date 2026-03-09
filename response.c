@@ -4,62 +4,101 @@
 #include <string.h>
 #include <ctype.h>
 
-// Simple JSON parser for Gemini response
-// Expected structure: {"candidates":[{"content":{"parts":[{"text":"solution"}]}}]}
+// Improved JSON parser for Gemini response
+// More robust parsing of candidates[0].content.parts[0].text
 static char* extract_text_value(const char *json, const char *key_path __attribute__((unused))) {
-    // This is a very basic JSON parser - in production you'd want a proper JSON library
-    // But for this simple use case, we'll extract the text field manually
+    // Find "candidates"
+    const char *candidates = strstr(json, "\"candidates\"");
+    if (!candidates) return NULL;
 
-    const char *candidates_start = strstr(json, "\"candidates\"");
-    if (!candidates_start) return NULL;
+    // Find the start of the candidates array
+    const char *array_start = strchr(candidates, '[');
+    if (!array_start) return NULL;
 
-    const char *text_start = strstr(candidates_start, "\"text\"");
-    if (!text_start) return NULL;
+    // Find the first object in the array
+    const char *object_start = strchr(array_start, '{');
+    if (!object_start) return NULL;
 
-    // Find the colon after "text"
-    const char *colon = strchr(text_start, ':');
+    // Find "content" within this object
+    const char *content = strstr(object_start, "\"content\"");
+    if (!content) return NULL;
+
+    // Find the content object start
+    const char *content_obj = strchr(content, '{');
+    if (!content_obj) return NULL;
+
+    // Find "parts" within the content object
+    const char *parts = strstr(content_obj, "\"parts\"");
+    if (!parts) return NULL;
+
+    // Find the parts array start
+    const char *parts_array = strchr(parts, '[');
+    if (!parts_array) return NULL;
+
+    // Find the first object in parts
+    const char *parts_obj = strchr(parts_array, '{');
+    if (!parts_obj) return NULL;
+
+    // Find "text" within this object
+    const char *text = strstr(parts_obj, "\"text\"");
+    if (!text) return NULL;
+
+    // Find the colon and then the opening quote
+    const char *colon = strchr(text, ':');
     if (!colon) return NULL;
 
-    // Skip colon and whitespace
     const char *value_start = colon + 1;
-    while (*value_start && (isspace(*value_start) || *value_start == '"')) value_start++;
-
+    while (*value_start && *value_start != '"') value_start++;
     if (*value_start != '"') return NULL;
 
-    // Find the end quote
-    const char *value_end = value_start + 1;
-    while (*value_end && *value_end != '"') {
-        if (*value_end == '\\') value_end++; // Skip escaped characters
+    value_start++; // Skip the opening quote
+    const char *value_end = value_start;
+
+    // Find the closing quote, handling escaped quotes
+    while (*value_end) {
+        if (*value_end == '"') {
+            // Check if it's escaped
+            int backslash_count = 0;
+            const char *check = value_end - 1;
+            while (check >= value_start && *check == '\\') {
+                backslash_count++;
+                check--;
+            }
+            if (backslash_count % 2 == 0) {
+                // Not escaped, this is the end
+                break;
+            }
+        }
         value_end++;
     }
 
     if (*value_end != '"') return NULL;
 
     // Allocate and copy the text
-    size_t text_len = value_end - value_start - 1;
-    char *text = (char*)malloc(text_len + 1);
-    if (!text) return NULL;
+    size_t text_len = value_end - value_start;
+    char *text_value = (char*)malloc(text_len + 1);
+    if (!text_value) return NULL;
 
     // Handle escape sequences
     size_t i = 0, j = 0;
-    for (i = 1; i <= text_len; i++) { // Start from 1 to skip opening quote, go to text_len inclusive
+    for (i = 0; i < text_len; i++) {
         if (value_start[i] == '\\') {
             i++; // Skip backslash
             switch (value_start[i]) {
-                case 'n': text[j++] = '\n'; break;
-                case 'r': text[j++] = '\r'; break;
-                case 't': text[j++] = '\t'; break;
-                case '"': text[j++] = '"'; break;
-                case '\\': text[j++] = '\\'; break;
-                default: text[j++] = value_start[i]; break;
+                case 'n': text_value[j++] = '\n'; break;
+                case 'r': text_value[j++] = '\r'; break;
+                case 't': text_value[j++] = '\t'; break;
+                case '"': text_value[j++] = '"'; break;
+                case '\\': text_value[j++] = '\\'; break;
+                default: text_value[j++] = value_start[i]; break;
             }
         } else {
-            text[j++] = value_start[i];
+            text_value[j++] = value_start[i];
         }
     }
-    text[j] = '\0';
+    text_value[j] = '\0';
 
-    return text;
+    return text_value;
 }
 
 bool parse_gemini_response(const char *json_response, MathResponse *response) {
