@@ -42,7 +42,7 @@ static char* extract_text_value(const char *json, const char *key_path __attribu
 
     // Handle escape sequences
     size_t i = 0, j = 0;
-    for (i = 1; i < text_len; i++) { // Start from 1 to skip opening quote
+    for (i = 1; i <= text_len; i++) { // Start from 1 to skip opening quote, go to text_len inclusive
         if (value_start[i] == '\\') {
             i++; // Skip backslash
             switch (value_start[i]) {

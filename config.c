@@ -12,19 +12,32 @@ static void strip_quotes(char *str) {
         str[len - 2] = '\0';
     }
 }
-    char* end;
+
+// Helper function to trim whitespace
+static char* trim_whitespace(char* str) {
+    if (!str) return NULL;
 
     // Trim leading space
-    while(isspace((unsigned char)*str)) str++;
+    char* start = str;
+    while(isspace((unsigned char)*start)) start++;
 
-    if(*str == 0) return str;
+    if(*start == 0) {
+        *str = '\0';
+        return str;
+    }
 
     // Trim trailing space
-    end = str + strlen(str) - 1;
-    while(end > str && isspace((unsigned char)*end)) end--;
+    char* end = start + strlen(start) - 1;
+    while(end > start && isspace((unsigned char)*end)) end--;
 
-    // Write new null terminator character
-    end[1] = '\0';
+    // Shift the trimmed string to the beginning
+    size_t trimmed_len = end - start + 1;
+    if (start != str) {
+        memmove(str, start, trimmed_len);
+    }
+
+    // Null terminate
+    str[trimmed_len] = '\0';
 
     return str;
 }
