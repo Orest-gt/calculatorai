@@ -4,47 +4,35 @@
 #include <string.h>
 #include <ctype.h>
 
-// Improved JSON parser for Gemini response
-// More robust parsing of candidates[0].content.parts[0].text
+// Improved JSON parser for OpenAI chat completions response
+// More robust parsing of choices[0].message.content
 static char* extract_text_value(const char *json, const char *key_path __attribute__((unused))) {
-    // Find "candidates"
-    const char *candidates = strstr(json, "\"candidates\"");
-    if (!candidates) return NULL;
+    // Find "choices"
+    const char *choices = strstr(json, "\"choices\"");
+    if (!choices) return NULL;
 
-    // Find the start of the candidates array
-    const char *array_start = strchr(candidates, '[');
+    // Find the start of the choices array
+    const char *array_start = strchr(choices, '[');
     if (!array_start) return NULL;
 
     // Find the first object in the array
     const char *object_start = strchr(array_start, '{');
     if (!object_start) return NULL;
 
-    // Find "content" within this object
-    const char *content = strstr(object_start, "\"content\"");
+    // Find "message" within this object
+    const char *message = strstr(object_start, "\"message\"");
+    if (!message) return NULL;
+
+    // Find the message object start
+    const char *message_obj = strchr(message, '{');
+    if (!message_obj) return NULL;
+
+    // Find "content" within the message object
+    const char *content = strstr(message_obj, "\"content\"");
     if (!content) return NULL;
 
-    // Find the content object start
-    const char *content_obj = strchr(content, '{');
-    if (!content_obj) return NULL;
-
-    // Find "parts" within the content object
-    const char *parts = strstr(content_obj, "\"parts\"");
-    if (!parts) return NULL;
-
-    // Find the parts array start
-    const char *parts_array = strchr(parts, '[');
-    if (!parts_array) return NULL;
-
-    // Find the first object in parts
-    const char *parts_obj = strchr(parts_array, '{');
-    if (!parts_obj) return NULL;
-
-    // Find "text" within this object
-    const char *text = strstr(parts_obj, "\"text\"");
-    if (!text) return NULL;
-
     // Find the colon and then the opening quote
-    const char *colon = strchr(text, ':');
+    const char *colon = strchr(content, ':');
     if (!colon) return NULL;
 
     const char *value_start = colon + 1;

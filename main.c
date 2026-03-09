@@ -32,7 +32,7 @@ int main(void) {
     }
 
     // Initialize curl
-    if (!init_curl(&http_ctx, config.timeout_seconds)) {
+    if (!init_curl(&http_ctx, config.api_key, config.timeout_seconds)) {
         fprintf(stderr, "Failed to initialize HTTP client\n");
         return EXIT_FAILURE;
     }

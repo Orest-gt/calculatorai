@@ -81,23 +81,18 @@ bool construct_gemini_request(const MathRequest *request, char *json_buffer, siz
         return false;
     }
 
-    // Construct the JSON payload
+    // Construct the JSON payload in OpenAI chat completions format
     int written = snprintf(json_buffer, buffer_size,
         "{"
-        "\"system_instruction\":{"
-        "\"parts\":["
+        "\"model\":\"deepseek-r1\","
+        "\"messages\":["
         "{"
-        "\"text\":\"Give ready to write solution, fully explained and answered. No conversation with the user, only straight up output. Be professional and do nothing else than what proposed. Answer in %s.\""
-        "}"
-        "]"
+        "\"role\":\"system\","
+        "\"content\":\"Give ready to write solution, fully explained and answered. No conversation with the user, only straight up output. Be professional and do nothing else than what proposed. Answer in %s.\""
         "},"
-        "\"contents\":["
         "{"
-        "\"parts\":["
-        "{"
-        "\"text\":\"%s\""
-        "}"
-        "]"
+        "\"role\":\"user\","
+        "\"content\":\"%s\""
         "}"
         "]"
         "}",
