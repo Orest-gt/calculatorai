@@ -20,7 +20,7 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total_size;
 }
 
-bool init_curl(HttpContext *ctx) {
+bool init_curl(HttpContext *ctx, int timeout_seconds) {
     // Initialize curl
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "Error: Failed to initialize libcurl\n");
@@ -38,8 +38,8 @@ bool init_curl(HttpContext *ctx) {
         return false;
     }
 
-    // Set timeout (30 seconds default)
-    curl_easy_setopt(ctx->curl_handle, CURLOPT_TIMEOUT, 30);
+    // Set timeout from config
+    curl_easy_setopt(ctx->curl_handle, CURLOPT_TIMEOUT, timeout_seconds);
 
     // Set up headers (only Content-Type for JSON)
     ctx->headers = NULL;
@@ -65,12 +65,23 @@ bool send_request(HttpContext *ctx, const char *base_url, const char *api_key, c
     ctx->response_size = 0;
     ctx->response_buffer[0] = '\0';
 
-    // Construct full URL with API key as query parameter
-    char full_url[1024];
-    if (snprintf(full_url, sizeof(full_url), "%s?key=%s", base_url, api_key) >= (int)sizeof(full_url)) {
-        fprintf(stderr, "Error: URL too long\n");
+    // URL encode the API key
+    char *encoded_key = curl_easy_escape(ctx->curl_handle, api_key, 0);
+    if (!encoded_key) {
+        fprintf(stderr, "Error: Failed to encode API key\n");
         return false;
     }
+
+    // Construct full URL with encoded API key as query parameter
+    char full_url[1024];
+    if (snprintf(full_url, sizeof(full_url), "%s?key=%s", base_url, encoded_key) >= (int)sizeof(full_url)) {
+        fprintf(stderr, "Error: URL too long\n");
+        curl_free(encoded_key);
+        return false;
+    }
+
+    // Free the encoded key
+    curl_free(encoded_key);
 
     // Set URL
     curl_easy_setopt(ctx->curl_handle, CURLOPT_URL, full_url);

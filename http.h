@@ -13,7 +13,7 @@ typedef struct {
 } HttpContext;
 
 // Function declarations
-bool init_curl(HttpContext *ctx);
+bool init_curl(HttpContext *ctx, int timeout_seconds);
 bool send_request(HttpContext *ctx, const char *base_url, const char *api_key, const char *json_payload);
 void cleanup_curl(HttpContext *ctx);
 

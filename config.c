@@ -53,7 +53,12 @@ static bool parse_ini_line(const char* line, char* key, char* value) {
     key[key_len] = '\0';
     trim_whitespace(key);
 
-    strcpy(value, equals + 1);
+    const char* value_start = equals + 1;
+    size_t value_len = strlen(value_start);
+    if (value_len >= 256) return false; // Value too long
+
+    strncpy(value, value_start, value_len);
+    value[value_len] = '\0';
     trim_whitespace(value);
 
     return true;
@@ -89,8 +94,15 @@ bool load_config(const char *config_path, Config *config) {
             char* end = strchr(line, ']');
             if (end) {
                 *end = '\0';
-                strcpy(section, line + 1);
-                in_gemini_section = (strcmp(section, "gemini") == 0);
+                char* section_start = line + 1;
+                size_t section_len = end - section_start;
+                if (section_len < sizeof(section)) {
+                    strncpy(section, section_start, section_len);
+                    section[section_len] = '\0';
+                    in_gemini_section = (strcmp(section, "gemini") == 0);
+                } else {
+                    fprintf(stderr, "Warning: Section name too long, ignoring\n");
+                }
             }
             continue;
         }
