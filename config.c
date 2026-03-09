@@ -4,8 +4,14 @@
 #include <string.h>
 #include <ctype.h>
 
-// Simple INI parser helper functions
-static char* trim_whitespace(char* str) {
+// Helper function to strip surrounding quotes
+static void strip_quotes(char *str) {
+    size_t len = strlen(str);
+    if (len >= 2 && str[0] == '"' && str[len - 1] == '"') {
+        memmove(str, str + 1, len - 2);
+        str[len - 2] = '\0';
+    }
+}
     char* end;
 
     // Trim leading space
@@ -83,7 +89,11 @@ bool load_config(const char *config_path, Config *config) {
 
             if (parse_ini_line(line, key, value)) {
                 if (strcmp(key, "api_key") == 0) {
-                    strncpy(config->api_key, value, sizeof(config->api_key) - 1);
+                    char temp_value[256];
+                    strncpy(temp_value, value, sizeof(temp_value) - 1);
+                    temp_value[sizeof(temp_value) - 1] = '\0';
+                    strip_quotes(temp_value);
+                    strncpy(config->api_key, temp_value, sizeof(config->api_key) - 1);
                     config->api_key[sizeof(config->api_key) - 1] = '\0';
                 } else if (strcmp(key, "language") == 0) {
                     strncpy(config->language, value, sizeof(config->language) - 1);
